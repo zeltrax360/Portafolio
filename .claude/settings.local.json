@@ -8,7 +8,9 @@
       "Bash(git commit *)",
       "PowerShell(Get-Service -Name \"postgresql-x64-18\")",
       "PowerShell(Restart-Service -Force)",
-      "Bash(git commit -m 'Add complete portfolio structure: Projects 2-8 with README and documentation *)"
+      "Bash(git commit -m 'Add complete portfolio structure: Projects 2-8 with README and documentation *)",
+      "Bash(git push *)",
+      "Bash(git commit -m 'Add Power BI dashboard specification and step-by-step guide *)"
     ]
   }
 }
