@@ -23,17 +23,15 @@ try {
 }
 
 # ============================================================================
-# PASO 2: Solicitar credenciales PostgreSQL
+# PASO 2: Configurar credenciales PostgreSQL
 # ============================================================================
 Write-Host "`n[2] Configurando acceso a PostgreSQL..." -ForegroundColor Yellow
 
-$dbUser = Read-Host "Usuario PostgreSQL [postgres]"
-if ([string]::IsNullOrWhiteSpace($dbUser)) { $dbUser = "postgres" }
+$dbUser = "postgres"
+$dbPasswordPlain = ""  # Sin contraseña
+$env:PGPASSWORD = ""
 
-$dbPassword = Read-Host "Contraseña PostgreSQL" -AsSecureString
-$dbPasswordPlain = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToCoTaskMemUnicode($dbPassword))
-
-$env:PGPASSWORD = $dbPasswordPlain
+Write-Host "✓ Usando usuario: $dbUser (sin contraseña)" -ForegroundColor Green
 
 # ============================================================================
 # PASO 3: Crear Base de Datos
