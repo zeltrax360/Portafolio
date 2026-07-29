@@ -1,160 +1,106 @@
-# Setup Automático - Proyecto 1 Service Desk
-# Script PowerShell para configurar PostgreSQL, cargar datos y ejecutar análisis
-
-$ErrorActionPreference = "Stop"
+# Setup Automatico - Proyecto 1 Service Desk
 
 Write-Host "================================" -ForegroundColor Cyan
-Write-Host "SETUP AUTOMÁTICO - SERVICE DESK" -ForegroundColor Cyan
+Write-Host "SETUP AUTOMATICO - SERVICE DESK" -ForegroundColor Cyan
 Write-Host "================================" -ForegroundColor Cyan
 
-# ============================================================================
+# Variables
+$dbUser = "postgres"
+$dbName = "service_desk"
+$dbHost = "localhost"
+$projectPath = "Proyecto-1-Service-Desk"
+
 # PASO 1: Verificar PostgreSQL
-# ============================================================================
 Write-Host "`n[1] Verificando PostgreSQL..." -ForegroundColor Yellow
-
-$pgInstalled = $null
-try {
-    $pgInstalled = psql --version 2>$null
-    Write-Host "✓ PostgreSQL encontrado: $pgInstalled" -ForegroundColor Green
-} catch {
-    Write-Host "✗ PostgreSQL no está instalado o no está en PATH" -ForegroundColor Red
-    Write-Host "  Descargalo de: https://www.postgresql.org/download/windows/" -ForegroundColor Yellow
+$pgVersion = psql --version
+if ($pgVersion) {
+    Write-Host "OK PostgreSQL: $pgVersion" -ForegroundColor Green
+} else {
+    Write-Host "ERROR: PostgreSQL no encontrado" -ForegroundColor Red
     exit 1
 }
 
-# ============================================================================
-# PASO 2: Configurar credenciales PostgreSQL
-# ============================================================================
-Write-Host "`n[2] Configurando acceso a PostgreSQL..." -ForegroundColor Yellow
+# PASO 2: Crear Base de Datos
+Write-Host "`n[2] Creando base de datos 'service_desk'..." -ForegroundColor Yellow
+psql -U $dbUser -h $dbHost -c "DROP DATABASE IF EXISTS service_desk;" 2>$null
+psql -U $dbUser -h $dbHost -c "CREATE DATABASE service_desk;" 2>$null
+Write-Host "OK Base de datos creada" -ForegroundColor Green
 
-$dbUser = "postgres"
-$dbPasswordPlain = ""  # Sin contraseña
-$env:PGPASSWORD = ""
+# PASO 3: Cargar Scripts SQL
+Write-Host "`n[3] Cargando esquema SQL..." -ForegroundColor Yellow
 
-Write-Host "✓ Usando usuario: $dbUser (sin contraseña)" -ForegroundColor Green
+psql -U $dbUser -d $dbName -h $dbHost -f "$projectPath\sql\01_create_tables.sql" 2>$null
+Write-Host "  OK Tablas creadas" -ForegroundColor Green
 
-# ============================================================================
-# PASO 3: Crear Base de Datos
-# ============================================================================
-Write-Host "`n[3] Creando base de datos 'service_desk'..." -ForegroundColor Yellow
+psql -U $dbUser -d $dbName -h $dbHost -f "$projectPath\sql\02_insert_data.sql" 2>$null
+Write-Host "  OK Datos basicos" -ForegroundColor Green
 
-try {
-    psql -U $dbUser -h localhost -c "CREATE DATABASE service_desk;" 2>$null
-    Write-Host "✓ Base de datos creada" -ForegroundColor Green
-} catch {
-    Write-Host "⚠ Base de datos podría ya existir (continuando...)" -ForegroundColor Yellow
-}
+psql -U $dbUser -d $dbName -h $dbHost -f "$projectPath\sql\03_analysis_queries.sql" 2>$null
+Write-Host "  OK Queries cargadas" -ForegroundColor Green
 
-# ============================================================================
-# PASO 4: Cargar Scripts SQL
-# ============================================================================
-Write-Host "`n[4] Cargando esquema SQL..." -ForegroundColor Yellow
+# PASO 4: Generar Datos
+Write-Host "`n[4] Generando 10,000 tickets (1-2 minutos)..." -ForegroundColor Yellow
+psql -U $dbUser -d $dbName -h $dbHost -f "$projectPath\sql\04_generate_sample_data.sql" 2>$null
+Write-Host "OK Datos generados" -ForegroundColor Green
 
-$sqlScripts = @(
-    "Proyecto-1-Service-Desk\sql\01_create_tables.sql",
-    "Proyecto-1-Service-Desk\sql\02_insert_data.sql",
-    "Proyecto-1-Service-Desk\sql\03_analysis_queries.sql"
-)
+# PASO 5: Verificar Datos
+Write-Host "`n[5] Verificando datos..." -ForegroundColor Yellow
+$count = psql -U $dbUser -d $dbName -h $dbHost -t -c "SELECT COUNT(*) FROM tickets;" 2>$null
+Write-Host "OK Total tickets: $count" -ForegroundColor Green
 
-foreach ($script in $sqlScripts) {
-    Write-Host "  Ejecutando: $script"
-    try {
-        psql -U $dbUser -d service_desk -h localhost -f $script 2>$null
-        Write-Host "  ✓ $script cargado" -ForegroundColor Green
-    } catch {
-        Write-Host "  ✗ Error en $script" -ForegroundColor Red
-    }
-}
-
-# ============================================================================
-# PASO 5: Generar Datos de Ejemplo
-# ============================================================================
-Write-Host "`n[5] Generando 10,000 tickets de ejemplo..." -ForegroundColor Yellow
-Write-Host "  (esto puede tomar 1-2 minutos...)" -ForegroundColor Gray
-
-try {
-    psql -U $dbUser -d service_desk -h localhost -f "Proyecto-1-Service-Desk\sql\04_generate_sample_data.sql" 2>$null
-    Write-Host "✓ Datos de ejemplo generados" -ForegroundColor Green
-} catch {
-    Write-Host "✗ Error generando datos" -ForegroundColor Red
-}
-
-# ============================================================================
 # PASO 6: Configurar .env
-# ============================================================================
-Write-Host "`n[6] Configurando archivo .env..." -ForegroundColor Yellow
-
+Write-Host "`n[6] Configurando .env..." -ForegroundColor Yellow
+$envFile = "$projectPath\.env"
 $envContent = @"
-DB_HOST=localhost
+DB_HOST=$dbHost
 DB_PORT=5432
-DB_NAME=service_desk
+DB_NAME=$dbName
 DB_USER=$dbUser
-DB_PASSWORD=$dbPasswordPlain
+DB_PASSWORD=
 RANDOM_STATE=42
 TEST_SIZE=0.2
 "@
+Set-Content -Path $envFile -Value $envContent -Encoding UTF8
+Write-Host "OK .env configurado" -ForegroundColor Green
 
-$envFile = "Proyecto-1-Service-Desk\.env"
-Set-Content -Path $envFile -Value $envContent
-Write-Host "✓ .env configurado" -ForegroundColor Green
-
-# ============================================================================
 # PASO 7: Instalar Dependencias Python
-# ============================================================================
 Write-Host "`n[7] Instalando dependencias Python..." -ForegroundColor Yellow
+pip install -q -r "$projectPath\requirements.txt" 2>$null
+Write-Host "OK Dependencias instaladas" -ForegroundColor Green
 
-try {
-    pip install -r "Proyecto-1-Service-Desk\requirements.txt" 2>$null | Out-Null
-    Write-Host "✓ Dependencias instaladas" -ForegroundColor Green
-} catch {
-    Write-Host "✗ Error instalando dependencias" -ForegroundColor Red
-}
-
-# ============================================================================
 # PASO 8: Ejecutar Análisis
-# ============================================================================
-Write-Host "`n[8] Ejecutando análisis de datos..." -ForegroundColor Yellow
+Write-Host "`n[8] Ejecutando análisis..." -ForegroundColor Yellow
 
-$scripts = @(
-    @{ name = "Exploración de Datos"; script = "scripts\01_data_exploration.py" },
-    @{ name = "Análisis Descriptivo"; script = "scripts\03_analysis.py" },
-    @{ name = "Predicción ML"; script = "scripts\04_ml_prediction.py" }
-)
+Push-Location $projectPath
 
-Set-Location "Proyecto-1-Service-Desk"
+Write-Host "  > Exploración de datos..."
+python scripts/01_data_exploration.py 2>$null
+Write-Host "  OK Exploración completada" -ForegroundColor Green
 
-foreach ($item in $scripts) {
-    Write-Host "`n  ► $($item.name)..." -ForegroundColor Cyan
-    try {
-        python $item.script
-        Write-Host "  ✓ $($item.name) completado" -ForegroundColor Green
-    } catch {
-        Write-Host "  ✗ Error en $($item.name)" -ForegroundColor Red
-    }
-}
+Write-Host "  > Análisis descriptivo..."
+python scripts/03_analysis.py 2>$null
+Write-Host "  OK Análisis completado" -ForegroundColor Green
 
-Set-Location ".."
+Write-Host "  > Machine Learning..."
+python scripts/04_ml_prediction.py 2>$null
+Write-Host "  OK ML completado" -ForegroundColor Green
 
-# ============================================================================
+Pop-Location
+
 # PASO 9: Resumen Final
-# ============================================================================
 Write-Host "`n================================" -ForegroundColor Cyan
-Write-Host "✓ SETUP COMPLETADO" -ForegroundColor Green
+Write-Host "OK SETUP COMPLETADO" -ForegroundColor Green
 Write-Host "================================" -ForegroundColor Cyan
 
-Write-Host "`nProyecto configurado en:" -ForegroundColor Yellow
-Write-Host "  📁 $((Get-Location).Path)\Proyecto-1-Service-Desk" -ForegroundColor White
+Write-Host "`nDatos cargados:" -ForegroundColor Yellow
+Write-Host "  - Base de datos: service_desk" -ForegroundColor White
+Write-Host "  - Tablas: tecnicos, categorias, tickets, sla_policies" -ForegroundColor White
+Write-Host "  - Registros: $count tickets" -ForegroundColor White
 
-Write-Host "`nPróximos pasos:" -ForegroundColor Yellow
+Write-Host "`nProximos pasos:" -ForegroundColor Yellow
 Write-Host "  1. Abre Power BI Desktop" -ForegroundColor White
 Write-Host "  2. Conecta a PostgreSQL (localhost, service_desk)" -ForegroundColor White
-Write-Host "  3. Crea dashboard con las queries del archivo SQL" -ForegroundColor White
-Write-Host "  4. Haz commit y push a GitHub" -ForegroundColor White
+Write-Host "  3. Importa tablas y crea dashboard" -ForegroundColor White
+Write-Host "  4. Haz git push a GitHub" -ForegroundColor White
 
-Write-Host "`nArchivos generados:" -ForegroundColor Yellow
-Write-Host "  ✓ Base de datos PostgreSQL: service_desk" -ForegroundColor Green
-Write-Host "  ✓ 10,000 tickets de ejemplo" -ForegroundColor Green
-Write-Host "  ✓ Análisis completados" -ForegroundColor Green
-Write-Host "  ✓ Archivo .env configurado" -ForegroundColor Green
-
-Write-Host "`n" -ForegroundColor Cyan
+Write-Host ""
