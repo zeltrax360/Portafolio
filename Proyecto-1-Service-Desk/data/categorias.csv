@@ -1,0 +1,11 @@
+id,nombre,descripcion
+1,Network,Problemas de conectividad y red
+2,Hardware,Problemas de equipos físicos
+3,Software,Instalación y configuración de software
+4,Email,Problemas de correo electrónico
+5,Passwords,Reset y cambio de contraseñas
+6,Acceso,Permisos y acceso a recursos
+7,Impresoras,Problemas de impresoras
+8,VPN,Problemas de VPN
+9,Antivirus,Problemas de antivirus
+10,Otros,Otros problemas

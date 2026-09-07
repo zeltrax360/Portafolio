@@ -10,7 +10,14 @@
       "PowerShell(Restart-Service -Force)",
       "Bash(git commit -m 'Add complete portfolio structure: Projects 2-8 with README and documentation *)",
       "Bash(git push *)",
-      "Bash(git commit -m 'Add Power BI dashboard specification and step-by-step guide *)"
+      "Bash(git commit -m 'Add Power BI dashboard specification and step-by-step guide *)",
+      "Bash(mkdir -p \"C:\\\\Users\\\\Sebastian Beltran\\\\Documents\\\\Portafolio\\\\Proyecto-1-Service-Desk\\\\data\")",
+      "Bash(python generate_csv_data.py)",
+      "Read(//c/Program Files/PostgreSQL/18/**)",
+      "Bash(dir)",
+      "PowerShell(pip install psycopg2-binary -q)",
+      "PowerShell(python \"C:\\\\Users\\\\Sebastian Beltran\\\\Documents\\\\Portafolio\\\\load_data_to_postgres.py\")",
+      "Bash(git commit -m 'Complete Proyecto 1: Service Desk with PostgreSQL data and Power BI dashboard *)"
     ]
   }
 }
